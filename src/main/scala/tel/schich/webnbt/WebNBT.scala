@@ -5,13 +5,10 @@ import org.scalajs.dom
 import org.scalajs.dom.ext._
 import org.scalajs.dom.html
 
-import scala.scalajs.js.JSApp
-import scala.scalajs.js.annotation.JSExport
 import scala.scalajs.js.typedarray.{ArrayBuffer, Uint8Array}
 
-@JSExport
-object WebNBT extends JSApp {
-  override def main(): Unit = {
+object WebNBT {
+  def main(args: Array[String]): Unit = {
     window.addEventListener("DOMContentLoaded", onReady)
   }
 

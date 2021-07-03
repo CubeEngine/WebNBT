@@ -5,9 +5,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 import java.nio.charset.StandardCharsets
 
 import scala.annotation.tailrec
-import scala.scalajs.js.annotation.JSExport
 
-@JSExport
 object NbtParser {
   def parse(data: Array[Byte]): Option[NbtCompound] = {
     getValue(ByteBuffer.wrap(data).order(BIG_ENDIAN), NbtCompound.id) match {

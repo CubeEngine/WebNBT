@@ -1,8 +1,5 @@
 package tel.schich.webnbt
 
-import scala.scalajs.js.annotation.JSExport
-
-@JSExport
 class JsonNbtRenderer(prettyPrint: Boolean = true, indention: String = "\t") extends NbtRenderer[String] {
 
   override def render(compound: NbtCompound): String = {
