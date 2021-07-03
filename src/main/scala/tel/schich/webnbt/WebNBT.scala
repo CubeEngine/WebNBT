@@ -1,13 +1,16 @@
 package tel.schich.webnbt
 
-import org.scalajs.dom.{document, window}
 import org.scalajs.dom
-import org.scalajs.dom.ext._
-import org.scalajs.dom.html
+import org.scalajs.dom.{document, html, window}
+import tel.schich.webnbt.RegionParser.{CompressionMode, MissingChunk, ReadableChunk}
 
-import scala.scalajs.js.typedarray.{ArrayBuffer, Uint8Array}
+import java.nio.{ByteBuffer, ByteOrder}
+import scala.scalajs.js.typedarray.{ArrayBuffer, Int8Array, TA2AB, Uint8Array}
 
 object WebNBT {
+
+  private val RegionFilePattern = ".*\\.mc[ar]".r
+
   def main(args: Array[String]): Unit = {
     window.addEventListener("DOMContentLoaded", onReady)
   }
@@ -37,30 +40,55 @@ object WebNBT {
       val files = e.dataTransfer.files
       if (files.length == 1) {
         val reader = new dom.FileReader()
-        reader.readAsArrayBuffer(files(0))
+        val file = files(0)
+        reader.readAsArrayBuffer(file)
         reader.onload = { _ =>
           val fileContent = reader.result.asInstanceOf[ArrayBuffer]
           val bytes = new Uint8Array(fileContent, 0, fileContent.byteLength)
-          val decompressed =
-            if (bytes(0) == 0x1F && bytes(1) == 0x8B) PakoFacade.ungzip(bytes)
-            else bytes
 
-          val buf = Array.ofDim[Byte](decompressed.byteLength)
-          for (i <- 0 until decompressed.byteLength) {
-            buf(i) = decompressed(i).toByte
+          val data: NbtCompound = file.name match {
+            case RegionFilePattern() =>
+              val buf = toBuf(bytes)
+              val chunks = RegionParser.parse(buf)
+              NbtCompound(chunks.flatMap {
+                case ReadableChunk(x, z, byteOffset, size, compressionMode, _) =>
+                  val name = s"x=$x,z=$z"
+                  compressionMode match {
+                    case CompressionMode.GZip | CompressionMode.Zlib =>
+                      NbtParser.parse(decompress(bytes, byteOffset, size))
+                        .map(data => (name, data))
+                    case CompressionMode.Uncompressed =>
+                      NbtParser.parse(buf.position(byteOffset).limit(size))
+                        .map(data => (name, data))
+                    case CompressionMode.Unknown(i) =>
+                      Some((name, NbtString(s"Unknown compression: ${i}")))
+                  }
+                case MissingChunk(_, _) => None
+              }.toMap)
+            case _ =>
+              val buf =
+                if (bytes(0) == 0x1F && bytes(1) == 0x8B) decompress(bytes)
+                else toBuf(bytes)
+              NbtParser.parse(buf).getOrElse(NbtCompound(Map("error" -> NbtString("Failed to parse NBT!"))))
           }
 
-          NbtParser.parse(buf) match {
-            case Some(tree) =>
-              val json = new JsonNbtRenderer()
-              output.value = json.render(tree)
-            case None =>
-              window.alert("Failed to parse the file as NBT.")
-          }
+          val json = new JsonNbtRenderer()
+          output.value = json.render(data)
         }
       } else {
         window.alert("Please drop one NBT file (compressed or uncompressed, big endian).")
       }
     })
   }
+
+  private def decompress(data: Uint8Array) = {
+    toBuf(PakoFacade.ungzip(data))
+  }
+
+  private def decompress(data: Uint8Array, offset: Int, length: Int) = {
+    toBuf(PakoFacade.ungzip(data.subarray(offset, offset + length)))
+  }
+
+  private def toBuf(buf: Uint8Array) =
+    ByteBuffer.wrap(new Int8Array(buf.buffer).toArray).order(ByteOrder.BIG_ENDIAN)
 }

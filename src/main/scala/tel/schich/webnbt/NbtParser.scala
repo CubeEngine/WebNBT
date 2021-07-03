@@ -1,14 +1,13 @@
 package tel.schich.webnbt
 
-import java.nio.ByteOrder.BIG_ENDIAN
-import java.nio.{ByteBuffer, ByteOrder}
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
-
 import scala.annotation.tailrec
+import scala.collection.immutable.ArraySeq
 
 object NbtParser {
-  def parse(data: Array[Byte]): Option[NbtCompound] = {
-    getValue(ByteBuffer.wrap(data).order(BIG_ENDIAN), NbtCompound.id) match {
+  def parse(data: ByteBuffer): Option[NbtCompound] = {
+    getValue(data, NbtCompound.id) match {
       case c: NbtCompound => Some(c)
       case _ => None
     }
@@ -25,18 +24,21 @@ object NbtParser {
         for (i <- 0 until len) {
           buf(i) = getValue(data, tag)
         }
-        NbtList(tag, buf)
+        NbtList(tag, ArraySeq.unsafeWrapArray(buf))
       case NbtByteArray.id =>
         val len = data.getInt()
         val buf = Array.ofDim[Byte](len)
-        NbtByteArray(buf)
+        for (i <- 0 until len) {
+          buf(i) = data.get()
+        }
+        NbtByteArray(ArraySeq.unsafeWrapArray(buf))
       case NbtIntArray.id =>
         val len = data.getInt()
         val buf = Array.ofDim[Int](len)
         for (i <- 0 until len) {
           buf(i) = data.getInt()
         }
-        NbtIntArray(buf)
+        NbtIntArray(ArraySeq.unsafeWrapArray(buf))
       case NbtByte.id =>
         NbtByte(data.get())
       case NbtShort.id =>

@@ -10,6 +10,8 @@ libraryDependencies ++= Seq(
   "org.scala-js" %%% "scalajs-dom" % "1.1.0",
 )
 
+scalacOptions ++= Seq("-unchecked", "-deprecation")
+
 scalaJSUseMainModuleInitializer := true
 
 Compile / npmDependencies := Seq(
