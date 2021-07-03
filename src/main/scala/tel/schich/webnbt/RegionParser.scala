@@ -29,7 +29,7 @@ object RegionParser {
                     case 3 => CompressionMode.Uncompressed
                     case i => CompressionMode.Unknown(i)
                 }
-                ReadableChunk(x, z, byteOffset + 5, size, compressionMode, timestamp & 0xFFFFFFFFL)
+                ReadableChunk(x, z, byteOffset + 5, size - 1, compressionMode, timestamp & 0xFFFFFFFFL)
             }
         }
     }

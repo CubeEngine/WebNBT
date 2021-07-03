@@ -54,8 +54,11 @@ object WebNBT {
                 case ReadableChunk(x, z, byteOffset, size, compressionMode, _) =>
                   val name = s"x=$x,z=$z"
                   compressionMode match {
-                    case CompressionMode.GZip | CompressionMode.Zlib =>
-                      NbtParser.parse(decompress(bytes, byteOffset, size))
+                    case CompressionMode.GZip =>
+                      NbtParser.parse(toBuf(PakoFacade.inflate(bytes.subarray(byteOffset, byteOffset + size))))
+                        .map(data => (name, data))
+                    case CompressionMode.Zlib =>
+                      NbtParser.parse(toBuf(PakoFacade.inflateRaw(bytes.subarray(byteOffset, byteOffset + size))))
                         .map(data => (name, data))
                     case CompressionMode.Uncompressed =>
                       NbtParser.parse(buf.position(byteOffset).limit(size))
@@ -67,7 +70,7 @@ object WebNBT {
               }.toMap)
             case _ =>
               val buf =
-                if (bytes(0) == 0x1F && bytes(1) == 0x8B) decompress(bytes)
+                if (bytes(0) == 0x1F && bytes(1) == 0x8B) toBuf(PakoFacade.inflate(bytes))
                 else toBuf(bytes)
               NbtParser.parse(buf).getOrElse(NbtCompound(Map("error" -> NbtString("Failed to parse NBT!"))))
           }
@@ -79,14 +82,6 @@ object WebNBT {
         window.alert("Please drop one NBT file (compressed or uncompressed, big endian).")
       }
     })
-  }
-
-  private def decompress(data: Uint8Array) = {
-    toBuf(PakoFacade.ungzip(data))
-  }
-
-  private def decompress(data: Uint8Array, offset: Int, length: Int) = {
-    toBuf(PakoFacade.ungzip(data.subarray(offset, offset + length)))
   }
 
   private def toBuf(buf: Uint8Array) =

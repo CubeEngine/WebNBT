@@ -9,5 +9,7 @@ import scalajs.js
 @js.native
 @JSImport("pako", JSImport.Namespace)
 object PakoFacade extends js.Object {
+  def inflate(buf: Uint8Array): Uint8Array = js.native
+  def inflateRaw(buf: Uint8Array): Uint8Array = js.native
   def ungzip(buf: Uint8Array): Uint8Array = js.native
 }
